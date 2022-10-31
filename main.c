@@ -98,7 +98,8 @@ static int h_sync(struct libxsvf_host *h)
 		return 0;
 	if (u->error)
 		return -1;
-	printf("sending %d bits in %d bytes\n", bits, bytes);
+	if (u->verbose >= 1)
+		printf("sending %d bits in %d bytes\n", bits, bytes);
 	/*printf("data: ");
 	for (int i = 0; i < bytes; i++)
 		printf("%x/%x/%x ", u->tms[i], u->tdi[i], u->tdo[i]);
@@ -208,8 +209,13 @@ static int my_connect();
 int main(int argc, char * argv[])
 {
 	u.fd = my_connect();
-	u.f = fopen("jtag.xsvf", "rb");
-	libxsvf_play(&h, LIBXSVF_MODE_XSVF);
+	if (1) {
+		u.f = fopen("jtag.xsvf", "rb");
+		libxsvf_play(&h, LIBXSVF_MODE_XSVF);
+	} else {
+		u.f = fopen("test.svf", "rb");
+		libxsvf_play(&h, LIBXSVF_MODE_SVF);
+	}
 
 }
 
