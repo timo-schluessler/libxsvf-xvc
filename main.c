@@ -209,12 +209,36 @@ static int my_connect();
 int main(int argc, char * argv[])
 {
 	u.fd = my_connect();
-	if (1) {
-		u.f = fopen("jtag.xsvf", "rb");
-		libxsvf_play(&h, LIBXSVF_MODE_XSVF);
-	} else {
-		u.f = fopen("test.svf", "rb");
-		libxsvf_play(&h, LIBXSVF_MODE_SVF);
+
+	bool switch_to_lvds = false;
+	bool spartan6 = false;
+	if (argc == 2 && !strcmp(argv[1], "switch"))
+		switch_to_lvds = true;
+	else if (argc == 2 && !strcmp(argv[1], "spartan6"))
+		spartan6 = true;
+
+	if (!switch_to_lvds) {
+		if (1) {
+			u.f = fopen(spartan6 ? "jtags6.xsvf" : "jtag.xsvf", "rb");
+			if (!u.f)
+				return 1;
+			if (libxsvf_play(&h, LIBXSVF_MODE_XSVF))
+				return 2;
+		} else {
+			u.f = fopen("test.svf", "rb");
+			if (!u.f)
+				return 1;
+			if (libxsvf_play(&h, LIBXSVF_MODE_SVF))
+				return 2;
+		}
+	}
+
+	if (switch_to_lvds) {
+		u.f = fopen("switch-to-lvds.xsvf", "rb");
+		if (!u.f)
+			return 3;
+		if (libxsvf_play(&h, LIBXSVF_MODE_XSVF))
+			return 4;
 	}
 
 }
