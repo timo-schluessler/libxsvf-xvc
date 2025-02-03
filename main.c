@@ -113,16 +113,20 @@ static int h_sync(struct libxsvf_host *h)
 	uint8_t tdo[BUFFER_SIZE];
 	read(u->fd, tdo, bytes);
 
-	for (int i = 0; i < bytes; i++)
+	for (int i = 0; i < bytes; i++) {
+		//printf("got tdo: %x\n", tdo[i]);
 		if (u->tdo[i] != (tdo[i] & u->mask[i])) {
 			printf("tdo check failed: i %d, received %x, mask %x, should %x\n", i, tdo[i], u->mask[i], u->tdo[i]);
 			u->error = true;
 			return -1;
 		}
+	}
 	
 	reset(u);
 
-	return 0;
+	int bit = (bits - 1) % 8;
+	//printf("sync is returning byte %d, bit %d: %x\n", bytes - 1, bit, (tdo[bytes - 1] & (1<<bit)) >> bit);
+	return (tdo[bytes - 1] & (1<<bit)) >> bit; // return last received bit - used when scanning and single bits are synced
 }
 
 static int h_pulse_tck(struct libxsvf_host *h, int tms, int tdi, int tdo, int rmask, int sync)
@@ -165,6 +169,8 @@ static void h_report_tapstate(struct libxsvf_host *h)
 
 static void h_report_device(struct libxsvf_host *h, unsigned long idcode)
 {
+	if (!idcode)
+		return;
 	printf("idcode=0x%08lx, revision=0x%01lx, part=0x%04lx, manufactor=0x%03lx\n", idcode, (idcode >> 28) & 0xf, (idcode >> 12) & 0xffff, (idcode >> 1) & 0x7ff);
 }
 
@@ -212,10 +218,16 @@ int main(int argc, char * argv[])
 
 	bool switch_to_lvds = false;
 	bool spartan6 = false;
+	bool scan = false;
 	if (argc == 2 && !strcmp(argv[1], "switch"))
 		switch_to_lvds = true;
 	else if (argc == 2 && !strcmp(argv[1], "spartan6"))
 		spartan6 = true;
+	else if (argc ==  2 && !strcmp(argv[1], "scan")) {
+		if (libxsvf_play(&h, LIBXSVF_MODE_SCAN))
+			return 1;
+		return 0;
+	}
 
 	if (!switch_to_lvds) {
 		if (1) {
