@@ -29,6 +29,7 @@ struct udata_s {
 	int byte;
 
 	bool error;
+	bool last_tdo;
 };
 
 static void inc(struct libxsvf_host * h, struct udata_s * u)
@@ -125,8 +126,10 @@ static int h_sync(struct libxsvf_host *h)
 	reset(u);
 
 	int bit = (bits - 1) % 8;
-	//printf("sync is returning byte %d, bit %d: %x\n", bytes - 1, bit, (tdo[bytes - 1] & (1<<bit)) >> bit);
-	return (tdo[bytes - 1] & (1<<bit)) >> bit; // return last received bit - used when scanning and single bits are synced
+	u->last_tdo = (tdo[bytes - 1] >> bit) & 1; // return last received bit - used when scanning and single bits are synced
+	//printf("sync is returning byte %d, bit %d: %x\n", bytes - 1, bit, u->last_tdo);
+
+	return 0;
 }
 
 static int h_pulse_tck(struct libxsvf_host *h, int tms, int tdi, int tdo, int rmask, int sync)
@@ -150,8 +153,13 @@ static int h_pulse_tck(struct libxsvf_host *h, int tms, int tdi, int tdo, int rm
 	if (u->error)
 		return -1;
 	
-	if (sync)
-		return h_sync(h);
+	if (sync) {
+		int r = h_sync(h);
+		if (r < 0)
+			return r;
+		return u->last_tdo;
+	}
+
 	return 0;
 }
 
